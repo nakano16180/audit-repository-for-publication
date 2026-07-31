@@ -1,0 +1,4 @@
+interface:
+  display_name: "Audit Repository for Publication"
+  short_description: "Audit any Git repository before public release"
+  default_prompt: "Use $audit-repository-for-publication to audit this Git repository before publishing it publicly."
