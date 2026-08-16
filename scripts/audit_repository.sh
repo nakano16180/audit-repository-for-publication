@@ -75,6 +75,32 @@ pass() {
   printf 'PASS: %s\n' "$*"
 }
 
+run_validator() {
+  local label="$1"
+  local validator="$2"
+  local output
+  local status
+
+  if [[ -z "$validator" || ! -f "$validator" ]]; then
+    warn "$label was not found; run it in the target environment"
+    return
+  fi
+
+  set +e
+  output="$(python3 "$validator" "$target" 2>&1)"
+  status=$?
+  set -e
+  if ((status == 0)); then
+    pass "$label passed"
+  elif [[ "$output" == *"ModuleNotFoundError"* || "$output" == *"No module named"* ]]; then
+    warn "$label could not run because a Python dependency is unavailable"
+    printf '%s\n' "$output" | sed 's/^/  /' | sed -n '1,5p'
+  else
+    fail "$label failed"
+    printf '%s\n' "$output" | sed 's/^/  /' | sed -n '1,20p'
+  fi
+}
+
 warn() {
   warn_count=$((warn_count + 1))
   printf 'WARN: %s\n' "$*"
@@ -121,6 +147,17 @@ if ! git -C "$target" rev-parse --git-dir >/dev/null 2>&1; then
   exit 1
 fi
 pass 'target is a Git repository'
+
+repository_type="repository"
+if [[ -f "$target/.codex-plugin/plugin.json" ]]; then
+  repository_type="plugin"
+  pass 'repository type detected: Codex plugin'
+elif [[ -f "$target/SKILL.md" ]]; then
+  repository_type="skill"
+  pass 'repository type detected: Codex skill'
+else
+  pass 'repository type detected: generic repository'
+fi
 
 if [[ -z "$branch" ]]; then
   branch="$(git -C "$target" branch --show-current)"
@@ -229,6 +266,34 @@ else
   warn "$unreachable_count unreachable Git objects exist locally; they are not normally sent by a branch-only push"
 fi
 
+if [[ "$repository_type" == "skill" ]]; then
+  skill_validator="${AUDIT_SKILL_VALIDATOR:-}"
+  if [[ -z "$skill_validator" ]]; then
+    for candidate in \
+      "${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py" \
+      "$HOME/.codex/skills/.system/skill-creator/scripts/quick_validate.py"; do
+      if [[ -f "$candidate" ]]; then
+        skill_validator="$candidate"
+        break
+      fi
+    done
+  fi
+  run_validator 'Codex skill validator' "$skill_validator"
+elif [[ "$repository_type" == "plugin" ]]; then
+  plugin_validator="${AUDIT_PLUGIN_VALIDATOR:-}"
+  if [[ -z "$plugin_validator" ]]; then
+    for candidate in \
+      "${CODEX_HOME:-$HOME/.codex}/skills/.system/plugin-creator/scripts/validate_plugin.py" \
+      "$HOME/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py"; do
+      if [[ -f "$candidate" ]]; then
+        plugin_validator="$candidate"
+        break
+      fi
+    done
+  fi
+  run_validator 'Codex plugin validator (including bundled skill manifests)' "$plugin_validator"
+fi
+
 if [[ "$check_github" == "true" ]]; then
   if ! command -v gh >/dev/null 2>&1; then
     fail '--github requested but gh is not installed'
@@ -252,4 +317,3 @@ fi
 
 printf 'SUMMARY: PASS=%d WARN=%d FAIL=%d\n' "$pass_count" "$warn_count" "$fail_count"
 ((fail_count == 0))
-

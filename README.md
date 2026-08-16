@@ -6,6 +6,9 @@ reachable history, author metadata, documentation, licensing, and common traces
 of work records or personal data. It does not publish or modify the target
 repository.
 
+This skill supersedes `audit-skill-for-publication`; Codex skill and plugin
+repositories are handled through automatic repository-type detection.
+
 ## Requirements
 
 - Codex
@@ -14,6 +17,7 @@ repository.
 - ripgrep
 - GitHub CLI when GitHub visibility and default-branch checks are requested
 - Python 3 and the Codex skill validator when auditing a Codex skill
+- Python 3 and the Codex plugin validator when auditing a Codex plugin
 
 The bundled scripts target Linux and WSL. Other Unix-like environments may work
 but are not currently tested.
@@ -45,6 +49,10 @@ The report distinguishes blocking failures, material warnings, and verified
 checks. A branch-only push publishes commits reachable from that branch; local
 reflogs, unreachable objects, other branches, and tags have different Git
 boundaries and are reported separately.
+
+The script detects a root `SKILL.md` as a single Codex skill and a root
+`.codex-plugin/plugin.json` as a Codex plugin. It automatically runs the
+applicable installed validator; plugin detection takes precedence.
 
 ## Privacy and security
 

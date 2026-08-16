@@ -8,6 +8,13 @@ script="$(
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
 
+skill_validator="$tmp_dir/validate_skill.py"
+plugin_validator="$tmp_dir/validate_plugin.py"
+printf '%s\n' 'import sys' 'print("skill fixture valid")' >"$skill_validator"
+printf '%s\n' 'import sys' 'print("plugin fixture valid")' >"$plugin_validator"
+export AUDIT_SKILL_VALIDATOR="$skill_validator"
+export AUDIT_PLUGIN_VALIDATOR="$plugin_validator"
+
 fail_test() {
   printf 'FAIL: %s\n' "$*" >&2
   exit 1
@@ -51,8 +58,22 @@ git -C "$skill_repo" add README.md LICENSE SKILL.md
 git -C "$skill_repo" commit -q -m 'skill fixture'
 
 skill_output="$("$script" "$skill_repo" --branch main)" ||
-  fail_test 'skill repository should be accepted without special requirements'
-assert_contains "$skill_output" 'PASS: target is a Git repository'
+  fail_test 'skill repository should pass its applicable validator'
+assert_contains "$skill_output" 'PASS: repository type detected: Codex skill'
+assert_contains "$skill_output" 'PASS: Codex skill validator passed'
+
+plugin_repo="$tmp_dir/plugin"
+init_repo "$plugin_repo"
+mkdir -p "$plugin_repo/.codex-plugin"
+printf '%s\n' '{}' >"$plugin_repo/.codex-plugin/plugin.json"
+git -C "$plugin_repo" add README.md LICENSE .codex-plugin/plugin.json
+git -C "$plugin_repo" commit -q -m 'plugin fixture'
+
+plugin_output="$("$script" "$plugin_repo" --branch main)" ||
+  fail_test 'plugin repository should pass its applicable validator'
+assert_contains "$plugin_output" 'PASS: repository type detected: Codex plugin'
+assert_contains "$plugin_output" \
+  'PASS: Codex plugin validator (including bundled skill manifests) passed'
 
 leaky_repo="$tmp_dir/leaky"
 init_repo "$leaky_repo"

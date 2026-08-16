@@ -39,6 +39,19 @@ repository evidence, executed checks, or the relevant external system.
   external runtime is involved.
 - Known API, schema, platform, or vendor coupling is documented.
 
+## Codex distribution types
+
+- A single-skill repository has a valid root `SKILL.md`, matching
+  `agents/openai.yaml` when present, and passes the skill validator.
+- A plugin repository has a valid root `.codex-plugin/plugin.json`, passes the
+  plugin validator, and its bundled skill manifests match their directories.
+- Plugin roots are not required to contain `SKILL.md`; do not apply the
+  single-skill validator to the plugin root.
+- Skill and plugin privacy claims cover every local or remote data read, write,
+  debug output, fixture, and external action.
+- The clean install or discovery journey is verified in the actual Codex
+  environment, separately from metadata and fixture tests.
+
 ## Git and GitHub
 
 - The intended publication branch and exact push refspec are known.
@@ -62,4 +75,3 @@ privacy, ownership, and the central real journey are verified. Use
 `READY FOR PRIVATE TRIAL` when private upload is safe but public evidence is
 incomplete. Use `NOT READY` for sensitive reachable history, missing reuse
 terms, failing central checks, unclear ownership, or a safety defect.
-

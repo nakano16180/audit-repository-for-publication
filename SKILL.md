@@ -32,8 +32,13 @@ repository visibility unless the user separately authorizes that action.
    scripts/audit_repository.sh /path/to/repository --branch main --github
    ```
 
-6. For a Codex skill repository only, also run the applicable skill validator.
-   Do not require `SKILL.md` or skill metadata from ordinary repositories.
+6. Let the script detect repository type and run the applicable validator:
+   - A root `SKILL.md` selects the Codex skill validator.
+   - A root `.codex-plugin/plugin.json` selects the plugin validator, including
+     its bundled skill-manifest checks, and takes precedence over `SKILL.md`.
+   - Ordinary repositories do not require Codex metadata.
+   If validator dependencies are unavailable, rerun the named validator in the
+   documented isolated environment before concluding readiness.
 7. Report evidence in priority order:
    - `FAIL`: blocks public release or requires explicit review.
    - `WARN`: material limitation or incomplete evidence.
@@ -71,4 +76,3 @@ Conclude with exactly one readiness result:
 Include the audited branch, exact prospective push refspec, remote and
 visibility when verified, checks actually run, blockers, warnings, and any
 action that still requires authorization.
-
