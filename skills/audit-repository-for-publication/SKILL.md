@@ -1,6 +1,7 @@
 ---
 name: audit-repository-for-publication
 description: Audit any Git repository before making it public on GitHub. Use when Codex needs to assess public-release readiness, inspect README and license coverage, scan branch-reachable history for work records, secrets, personal paths or session data, review author and committer identity, verify branch and remote scope, distinguish unreachable local objects from pushable history, or evaluate a private trial before changing repository visibility.
+license: MIT
 ---
 
 # Audit Repository for Publication

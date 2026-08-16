@@ -24,8 +24,16 @@ but are not currently tested.
 
 ## Installation
 
-Install the repository as `audit-repository-for-publication` in a Codex skills
-directory, or ask Codex to install it with `$skill-installer`.
+Install the released skill for Codex at user scope with GitHub CLI:
+
+```bash
+gh skill install nakano16180/audit-repository-for-publication \
+  audit-repository-for-publication@v1.0.0 \
+  --agent codex --scope user --force
+```
+
+For a later release, replace `v1.0.0` with the intended version. The explicit
+version pin keeps the installed skill tied to an auditable GitHub release.
 
 ## Usage
 
@@ -38,7 +46,8 @@ $audit-repository-for-publication audit this repository before I make it public
 The bundled read-only audit can also be run directly:
 
 ```bash
-scripts/audit_repository.sh /path/to/repository --branch main
+skills/audit-repository-for-publication/scripts/audit_repository.sh \
+  /path/to/repository --branch main
 ```
 
 Add `--github` to read repository visibility and default-branch information
@@ -81,8 +90,11 @@ requires these human-judgment checks separately.
 Run the syntax check and integration test:
 
 ```bash
-bash -n scripts/audit_repository.sh tests/test_audit_repository.sh
-bash tests/test_audit_repository.sh
+bash -n \
+  skills/audit-repository-for-publication/scripts/audit_repository.sh \
+  skills/audit-repository-for-publication/tests/test_audit_repository.sh
+bash skills/audit-repository-for-publication/tests/test_audit_repository.sh
+gh skill publish --dry-run
 ```
 
 The integration test creates temporary Git repositories and exercises clean and
