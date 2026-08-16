@@ -22,7 +22,7 @@ repositories are handled through automatic repository-type detection.
 The bundled scripts target Linux and WSL. Other Unix-like environments may work
 but are not currently tested.
 
-## Installation
+## Install with `gh skill`
 
 Install the released skill for Codex at user scope with GitHub CLI:
 
@@ -34,6 +34,28 @@ gh skill install nakano16180/audit-repository-for-publication \
 
 For a later release, replace `v1.0.0` with the intended version. The explicit
 version pin keeps the installed skill tied to an auditable GitHub release.
+
+Confirm the installed source and pin:
+
+```bash
+gh skill list --agent codex --scope user \
+  --json skillName,sourceURL,version,pinned,path
+```
+
+Pinned skills are intentionally skipped by normal `gh skill update`. To move to
+a reviewed newer release, install that version explicitly:
+
+```bash
+gh skill install nakano16180/audit-repository-for-publication \
+  audit-repository-for-publication@v1.1.0 \
+  --agent codex --scope user --force
+```
+
+Run the installed integration test after installation or update:
+
+```bash
+bash ~/.codex/skills/audit-repository-for-publication/tests/test_audit_repository.sh
+```
 
 ## Usage
 
