@@ -28,6 +28,10 @@ assert_not_contains() {
   [[ "$1" != *"$2"* ]] || fail_test "expected output not to contain: $2"
 }
 
+run_audit() {
+  bash "$script" "$@"
+}
+
 init_repo() {
   local path="$1"
   mkdir -p "$path"
@@ -49,7 +53,7 @@ printf '%s\n' 'hello' >"$clean_repo/app.txt"
 git -C "$clean_repo" add README.md LICENSE app.txt
 git -C "$clean_repo" commit -q -m 'initial fixture'
 
-clean_output="$("$script" "$clean_repo" --branch main)" ||
+clean_output="$(run_audit "$clean_repo" --branch main)" ||
   fail_test 'clean ordinary repository should not fail'
 assert_contains "$clean_output" 'PASS: no work-record-like path found'
 assert_contains "$clean_output" 'PASS: all author and committer emails use GitHub noreply'
@@ -63,7 +67,7 @@ git -C "$remote_repo" commit -q -m 'remote fixture'
 git -C "$remote_repo" remote add origin \
   'https://fake-user:fake-token@example.test/owner/repository.git'
 
-remote_output="$("$script" "$remote_repo" --branch main)" ||
+remote_output="$(run_audit "$remote_repo" --branch main)" ||
   fail_test 'credential-bearing remote fixture should complete safely'
 assert_contains "$remote_output" \
   'https://example.test/owner/repository.git'
@@ -76,7 +80,7 @@ printf '%s\n' '---' 'name: fixture' 'description: Fixture.' '---' >"$skill_repo/
 git -C "$skill_repo" add README.md LICENSE SKILL.md
 git -C "$skill_repo" commit -q -m 'skill fixture'
 
-skill_output="$("$script" "$skill_repo" --branch main)" ||
+skill_output="$(run_audit "$skill_repo" --branch main)" ||
   fail_test 'skill repository should pass its applicable validator'
 assert_contains "$skill_output" 'PASS: repository type detected: Codex skill'
 assert_contains "$skill_output" 'PASS: Codex skill validator passed'
@@ -88,7 +92,7 @@ printf '%s\n' '{}' >"$plugin_repo/.codex-plugin/plugin.json"
 git -C "$plugin_repo" add README.md LICENSE .codex-plugin/plugin.json
 git -C "$plugin_repo" commit -q -m 'plugin fixture'
 
-plugin_output="$("$script" "$plugin_repo" --branch main)" ||
+plugin_output="$(run_audit "$plugin_repo" --branch main)" ||
   fail_test 'plugin repository should pass its applicable validator'
 assert_contains "$plugin_output" 'PASS: repository type detected: Codex plugin'
 assert_contains "$plugin_output" \
@@ -103,7 +107,7 @@ git -C "$leaky_repo" add README.md LICENSE records
 git -C "$leaky_repo" commit -q -m 'commit work record'
 
 set +e
-leaky_output="$("$script" "$leaky_repo" --branch main 2>&1)"
+leaky_output="$(run_audit "$leaky_repo" --branch main 2>&1)"
 leaky_status=$?
 set -e
 ((leaky_status != 0)) || fail_test 'sensitive fixture should fail'
@@ -120,7 +124,7 @@ git -C "$key_repo" add README.md LICENSE server.key
 git -C "$key_repo" commit -q -m 'key filename fixture'
 
 set +e
-key_output="$("$script" "$key_repo" --branch main 2>&1)"
+key_output="$(run_audit "$key_repo" --branch main 2>&1)"
 key_status=$?
 set -e
 ((key_status != 0)) || fail_test 'secret-like filename should fail'
@@ -134,7 +138,7 @@ git -C "$pattern_repo" commit -q -m 'custom pattern fixture'
 
 set +e
 pattern_output="$(
-  "$script" "$pattern_repo" --branch main \
+  run_audit "$pattern_repo" --branch main \
     --sensitive-pattern 'internal-customer-[0-9]+' 2>&1
 )"
 pattern_status=$?

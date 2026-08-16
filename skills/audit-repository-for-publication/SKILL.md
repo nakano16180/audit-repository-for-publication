@@ -16,7 +16,7 @@ repository visibility unless the user separately authorizes that action.
 2. Run the bundled read-only audit from this skill directory:
 
    ```bash
-   scripts/audit_repository.sh /path/to/repository --branch main
+   bash scripts/audit_repository.sh /path/to/repository --branch main
    ```
 
    Add project-specific patterns with repeated `--sensitive-pattern ERE`.
@@ -30,7 +30,7 @@ repository visibility unless the user separately authorizes that action.
 5. If GitHub state matters, explain the external read and rerun:
 
    ```bash
-   scripts/audit_repository.sh /path/to/repository --branch main --github
+   bash scripts/audit_repository.sh /path/to/repository --branch main --github
    ```
 
 6. Let the script detect repository type and run the applicable validator:

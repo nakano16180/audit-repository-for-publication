@@ -46,7 +46,7 @@ $audit-repository-for-publication audit this repository before I make it public
 The bundled read-only audit can also be run directly:
 
 ```bash
-skills/audit-repository-for-publication/scripts/audit_repository.sh \
+bash skills/audit-repository-for-publication/scripts/audit_repository.sh \
   /path/to/repository --branch main
 ```
 
