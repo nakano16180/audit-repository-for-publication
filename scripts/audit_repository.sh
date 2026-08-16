@@ -111,6 +111,33 @@ fail() {
   printf 'FAIL: %s\n' "$*"
 }
 
+record_sensitive_matches() {
+  local revision="$1"
+  local category="$2"
+  local pattern="$3"
+  local matched_location
+  local matched_revision
+  local matched_path
+  local matched_line
+  local ignored_content
+
+  while IFS= read -r -d '' matched_location &&
+    IFS= read -r -d '' matched_line &&
+    IFS= read -r ignored_content; do
+    matched_revision="${matched_location%%:*}"
+    matched_path="${matched_location#*:}"
+    printf '%s:%s:%s:%s\n' \
+      "$matched_revision" "$matched_path" "$matched_line" "$category" \
+      >>"$scan_file"
+  done < <(
+    git -C "$target" grep -n -I -z -E "$pattern" "$revision" -- . 2>/dev/null || true
+  )
+}
+
+redact_remote_url() {
+  printf '%s\n' "$1" | sed -E 's#([a-zA-Z][a-zA-Z0-9+.-]*://)[^/@]+@#\1#'
+}
+
 printf 'Audit target: %s\n' "$target"
 
 if [[ -s "$target/README.md" ]]; then
@@ -207,20 +234,24 @@ if [[ -n "$branch" ]] &&
     printf '%s\n' "$risky_paths" | sed 's/^/  /'
   fi
 
-  sensitive_regex='(/home/|/Users/)[A-Za-z0-9._-]+/|CODEX_THREAD_ID[=:][[:space:]]*[0-9a-fA-F]{8}|ATUIN_SESSION[=:][[:space:]]*[0-9a-fA-F]{8}|WT_SESSION[=:][[:space:]]*[0-9a-fA-F-]{8}|-----BEGIN ([A-Z0-9 ]+ )?PRIVATE KEY-----'
-  for pattern in "${sensitive_patterns[@]}"; do
-    sensitive_regex="$sensitive_regex|($pattern)"
-  done
-
   scan_file="$(mktemp)"
   trap 'rm -f "$scan_file"' EXIT
   while IFS= read -r revision; do
-    git -C "$target" grep -n -I -E "$sensitive_regex" "$revision" -- . \
-      >>"$scan_file" 2>/dev/null || true
+    record_sensitive_matches \
+      "$revision" 'personal-path' '(/home/|/Users/)[A-Za-z0-9._-]+/'
+    record_sensitive_matches \
+      "$revision" 'session-identifier' \
+      'CODEX_THREAD_ID[=:][[:space:]]*[0-9a-fA-F]{8}|ATUIN_SESSION[=:][[:space:]]*[0-9a-fA-F]{8}|WT_SESSION[=:][[:space:]]*[0-9a-fA-F-]{8}'
+    record_sensitive_matches \
+      "$revision" 'private-key-marker' \
+      '-----BEGIN ([A-Z0-9 ]+ )?PRIVATE KEY-----'
+    for pattern in "${sensitive_patterns[@]}"; do
+      record_sensitive_matches "$revision" 'custom-pattern' "$pattern"
+    done
   done < <(git -C "$target" rev-list "$branch")
   if [[ -s "$scan_file" ]]; then
     fail 'potential personal, session, or secret data found; review locations'
-    cut -d: -f1-3 "$scan_file" | sort -u | sed 's/^/  /' | sed -n '1,40p'
+    sort -u "$scan_file" | sed 's/^/  /' | sed -n '1,40p'
   else
     pass 'no default or user-supplied sensitive pattern matched committed content'
   fi
@@ -245,7 +276,7 @@ if [[ -z "$remote_name" ]]; then
 else
   remote_url="$(git -C "$target" remote get-url "$remote_name")"
   pass "Git remote is configured: $remote_name"
-  printf '  %s\n' "$remote_url"
+  printf '  %s\n' "$(redact_remote_url "$remote_url")"
 fi
 
 if [[ -n "$branch" ]] &&

@@ -24,6 +24,10 @@ assert_contains() {
   [[ "$1" == *"$2"* ]] || fail_test "expected output to contain: $2"
 }
 
+assert_not_contains() {
+  [[ "$1" != *"$2"* ]] || fail_test "expected output not to contain: $2"
+}
+
 init_repo() {
   local path="$1"
   mkdir -p "$path"
@@ -50,6 +54,21 @@ clean_output="$("$script" "$clean_repo" --branch main)" ||
 assert_contains "$clean_output" 'PASS: no work-record-like path found'
 assert_contains "$clean_output" 'PASS: all author and committer emails use GitHub noreply'
 assert_contains "$clean_output" 'Prospective push refspec: refs/heads/main:refs/heads/main'
+
+remote_repo="$tmp_dir/remote"
+init_repo "$remote_repo"
+printf '%s\n' 'hello' >"$remote_repo/app.txt"
+git -C "$remote_repo" add README.md LICENSE app.txt
+git -C "$remote_repo" commit -q -m 'remote fixture'
+git -C "$remote_repo" remote add origin \
+  'https://fake-user:fake-token@example.test/owner/repository.git'
+
+remote_output="$("$script" "$remote_repo" --branch main)" ||
+  fail_test 'credential-bearing remote fixture should complete safely'
+assert_contains "$remote_output" \
+  'https://example.test/owner/repository.git'
+assert_not_contains "$remote_output" 'fake-user'
+assert_not_contains "$remote_output" 'fake-token'
 
 skill_repo="$tmp_dir/skill"
 init_repo "$skill_repo"
@@ -90,6 +109,9 @@ set -e
 ((leaky_status != 0)) || fail_test 'sensitive fixture should fail'
 assert_contains "$leaky_output" 'WARN: work-record-like paths exist'
 assert_contains "$leaky_output" 'FAIL: potential personal, session, or secret data found'
+assert_contains "$leaky_output" \
+  ':records/example/sessions/session-019f1234.md:1:session-identifier'
+assert_not_contains "$leaky_output" '019f1234-secret'
 
 key_repo="$tmp_dir/key"
 init_repo "$key_repo"
@@ -119,5 +141,7 @@ pattern_status=$?
 set -e
 ((pattern_status != 0)) || fail_test 'custom sensitive pattern should fail'
 assert_contains "$pattern_output" 'FAIL: potential personal, session, or secret data found'
+assert_contains "$pattern_output" ':example.txt:1:custom-pattern'
+assert_not_contains "$pattern_output" 'internal-customer-42'
 
 printf 'PASS: generic repository publication audit checks\n'
